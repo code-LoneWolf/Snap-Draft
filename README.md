@@ -1,101 +1,213 @@
-SnapDraft: AI-Powered Email Assistant
-Project Overview
-SnapDraft is a Chrome extension designed to streamline email communication within Gmail. By integrating a Spring Boot backend with a custom-built extension, SnapDraft allows users to generate professional, context-aware email replies using Google's Gemini AI. The project bridges the gap between AI text generation and the Gmail user interface, enabling users to go "from thought to sent in seconds."
+# SnapDraft - AI Email Reply Generator
 
-Project Structure
-The project is split into a robust backend and a high-performance extension:
+SnapDraft is an AI-powered Chrome extension that integrates directly into Gmail and generates professional email replies using Google's Gemini API. The project is split into two parts: a Spring Boot backend that handles the AI request and a Chrome extension (content script) that injects a button into the Gmail compose window.
 
-Backend (Spring Boot)
-WebClientConfig.java: Sets up the reactive WebClient for external API calls.
+---
 
-EmailGeneratorController.java: REST endpoint for processing extension requests.
+## Project Structure
 
-EmailGeneratorService.java: Prompt engineering and Gemini API communication.
+```
+snapdraft/
+│
+├── backend/                        (Spring Boot)
+│   ├── src/main/java/com/email_writer/
+│   │   ├── Controller/
+│   │   │   ├── EmailGeneratorController.java
+│   │   │   └── EmailRequest.java
+│   │   ├── Service/
+│   │   │   └── EmailGeneratorService.java
+│   │   └── Config/
+│   │       └── WebClientConfig.java
+│   └── src/main/resources/
+│       └── application.properties
+│
+└── extension/                      (Chrome Extension)
+    ├── manifest.json
+    ├── content.js
+    └── SnapDraft.png
+```
 
-EmailRequest.java: Data model (DTO) for incoming email content and tone.
+---
 
-Extension (SnapDraft)
-manifest.json: Defines the extension configuration (v3), permissions, and script injection.
+## Prerequisites
 
-content.js: Core logic for DOM injection, mutation observation, and API interaction.
+Make sure the following are installed before running the project.
 
-SnapDraft.png: The visual identity/icon for the extension.
+- Java 17 or above
+- Maven 3.6 or above
+- Google Chrome browser
+- A Gemini API key (from [Google AI Studio](https://aistudio.google.com/))
 
-Technical Stack
-Backend: Java 17, Spring Boot 3.x, Spring WebFlux, Lombok.
+---
 
-Extension: JavaScript (ES6+), Chrome Extension API (Manifest V3).
+## Backend Setup
 
-AI Model: Google Gemini 1.5 Flash.
+### 1. Clone or download the project
 
-Key Features
-Dynamic UI Injection: Uses MutationObserver to monitor the Gmail DOM and inject the "AI Reply" button as soon as a compose or reply window is detected.
+```bash
+git clone https://github.com/your-username/snapdraft.git
+cd snapdraft/backend
+```
 
-Context Extraction: Automatically scrapes the existing email thread to provide the AI with the necessary context for a relevant reply.
+### 2. Set environment variables
 
-Asynchronous Communication: Uses the Fetch API to send requests to the local Spring Boot server, ensuring a smooth, non-blocking user experience.
+The backend reads the Gemini API URL and key from environment variables. Set them in your system before running.
 
-Direct Text Insertion: Utilizes document.execCommand to insert the AI-generated draft directly into the Gmail editor.
+On Linux or macOS:
 
-Configuration
-Environment Variables
-For security, API credentials are not hardcoded in the source. Ensure the following variables are set on your local machine:
+```bash
+export GEMINI_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
+export GEMINI_KEY=your_gemini_api_key_here
+```
 
-GEMINI_URL: The Gemini API generateContent endpoint.
+On Windows (Command Prompt):
 
-GEMINI_KEY: Your private Google Gemini API key.
+```cmd
+set GEMINI_URL=https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
+set GEMINI_KEY=your_gemini_api_key_here
+```
 
-Application Properties
-The application.properties file pulls these values dynamically:
+On Windows (PowerShell):
 
-Properties
-spring.application.name=email-writer
+```powershell
+$env:GEMINI_URL="https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+$env:GEMINI_KEY="your_gemini_api_key_here"
+```
 
-# Gemini API Configuration via Environment Variables
+These values map to the following entries in `application.properties`:
+
+```properties
 gemini.api.url=${GEMINI_URL}
 gemini.api.key=${GEMINI_KEY}
+```
 
-# Server Port
-server.port=8080
-Execution Steps
-1. Backend Setup
-Set the GEMINI_KEY and GEMINI_URL environment variables in your system or IDE.
+### 3. Build and run the backend
 
-Navigate to the backend directory and build the project:
-
-Bash
+```bash
 mvn clean install
-Start the Spring Boot application:
-
-Bash
 mvn spring-boot:run
-The server will start on http://localhost:8080.
+```
 
-2. Extension Installation
-Open Chrome and navigate to chrome://extensions/.
+The backend will start at `http://localhost:8080`.
 
-Turn on Developer Mode (top-right toggle).
+### 4. Test the backend (optional)
 
-Click Load unpacked and select the folder containing the extension files.
+You can test the endpoint using curl or Postman.
 
-Verify that the SnapDraft icon appears in your extensions bar.
+```bash
+curl -X POST http://localhost:8080/api/email/generate \
+  -H "Content-Type: application/json" \
+  -d '{"emailContent": "Hi, can we schedule a meeting tomorrow?", "tone": "professional"}'
+```
 
-3. Usage
-Open Gmail and click Compose or Reply.
+You should get a generated email reply as a plain text response.
 
-Look for the blue AI Reply button in the bottom toolbar.
+---
 
-Click the button; the extension will capture the email content and send it to the backend.
+## Chrome Extension Setup
 
-The button text will change to "Generating..." while the AI processes the prompt.
+### 1. Open Chrome Extensions page
 
-The generated reply is automatically inserted into the message body.
+Open Google Chrome and go to:
 
-Implementation Details
-Security: Used environment variable injection (${}) to prevent sensitive API keys from being committed to version control.
+```
+chrome://extensions/
+```
 
-Lombok Integration: Utilized @Data and @AllArgsConstructor to maintain a clean, boilerplate-free Java codebase.
+### 2. Enable Developer Mode
 
-Robust Selectors: The content.js script includes multiple fallback selectors to ensure the button is injected even if Gmail updates its internal class names.
+Toggle the "Developer mode" switch in the top right corner of the page.
 
-CORS Support: The backend is configured with @CrossOrigin to allow the Chrome extension to communicate with the local server securely.
+### 3. Load the extension
+
+Click "Load unpacked" and select the `extension/` folder from this project. The SnapDraft extension will appear in your extensions list.
+
+### 4. Pin the extension (optional)
+
+Click the puzzle icon in the Chrome toolbar and pin SnapDraft so it appears in your toolbar.
+
+---
+
+## How to Use
+
+1. Make sure the Spring Boot backend is running on `http://localhost:8080`.
+2. Open [Gmail](https://mail.google.com) in Chrome.
+3. Open any email you want to reply to.
+4. Click the "Reply" button in Gmail to open the compose window.
+5. You will see an "AI Reply" button injected into the compose toolbar.
+6. Click "AI Reply". The extension reads the email content, sends it to the backend, and inserts the generated reply directly into the compose box.
+7. Review the reply and send it.
+
+---
+
+## How It Works
+
+### Backend
+
+- `EmailGeneratorController` exposes a POST endpoint at `/api/email/generate` that accepts the email content and tone.
+- `EmailGeneratorService` builds a prompt from the request, calls the Gemini API using Spring WebClient, and parses the response.
+- `WebClientConfig` sets up the WebClient bean used for making HTTP requests.
+- `EmailRequest` is a simple data class holding `emailContent` and `tone`.
+
+### Extension
+
+- `manifest.json` defines the extension with Manifest V3, declares permissions for Gmail, and loads `content.js` when Gmail is opened.
+- `content.js` is a content script that watches the Gmail DOM using a MutationObserver. When a compose toolbar is detected, it injects the "AI Reply" button.
+- On click, the button reads the current email thread content, sends a POST request to the local backend, and inserts the reply text into the Gmail compose box.
+
+---
+
+## API Endpoint Reference
+
+| Method | Endpoint              | Description                        |
+|--------|-----------------------|------------------------------------|
+| POST   | /api/email/generate   | Generates an AI reply for an email |
+
+Request body:
+
+```json
+{
+  "emailContent": "The original email text here",
+  "tone": "professional"
+}
+```
+
+Response: plain text string containing the generated reply.
+
+---
+
+## Common Issues
+
+**"AI Reply" button not appearing**
+
+Make sure the backend is running before opening Gmail. Also try refreshing the Gmail tab after loading the extension.
+
+**Failed to generate reply error**
+
+Check that the backend is running on port 8080 and the environment variables are correctly set. Open the Chrome DevTools console on the Gmail tab to see detailed error logs.
+
+**Extension not loading**
+
+Make sure Developer Mode is enabled in `chrome://extensions/` and that you selected the correct folder containing `manifest.json`.
+
+**CORS errors**
+
+The backend is configured with `@CrossOrigin(origins = "*")` so all origins are allowed. If you still see CORS errors, verify the backend is running and accessible at `http://localhost:8080`.
+
+---
+
+## Notes
+
+- The backend must be running locally whenever you use the extension. It is not deployed to any server.
+- The Gemini API key should never be committed to version control. It is stored as an environment variable for this reason.
+- The tone is currently hardcoded to "professional" in the extension but can be changed or made configurable.
+
+---
+
+## Tech Stack
+
+- Java 17, Spring Boot, Spring WebFlux (WebClient)
+- Google Gemini API
+- Chrome Extension (Manifest V3, vanilla JavaScript)
+- Lombok, Jackson
+- Maven
